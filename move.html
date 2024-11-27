@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Aptos & EVM Address Checker</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-100 text-gray-800 font-sans p-6">
+  <div class="max-w-lg mx-auto bg-white p-6 rounded-lg shadow-md">
+    <h1 class="text-2xl font-bold mb-4 text-center">Movement Checker</h1>
+
+    <div class="mb-4">
+      <label for="aptosAddress" class="block text-gray-700 font-semibold mb-2">Input Aptos Address:</label>
+      <input 
+        type="text" 
+        id="aptosAddress" 
+        placeholder="Masukkan Aptos Address" 
+        class="w-full p-3 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+      />
+    </div>
+
+    <div class="mb-4">
+      <label for="evmAddress" class="block text-gray-700 font-semibold mb-2">Input EVM Address:</label>
+      <input 
+        type="text" 
+        id="evmAddress" 
+        placeholder="EVM Address" 
+        class="w-full p-3 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+      />
+    </div>
+
+    <button 
+      onclick="fetchResults()"
+      class="w-full bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded"
+    >
+      Cek
+    </button>
+
+    <div id="result" class="mt-6 text-sm text-gray-700">
+      <!-- Results will appear here -->
+    </div>
+  </div>
+
+  <script>
+    async function fetchSequenceNumber(apiUrl, address) {
+      try {
+        const response = await fetch(apiUrl.replace("{address}", address), {
+          method: "GET",
+          headers: {
+            "accept": "application/json, text/plain, */*",
+            "x-aptos-client": "aptos-ts-sdk/1.21.0",
+          },
+        });
+
+        if (!response.ok) {
+          throw new Error(`Error: ${response.status}`);
+        }
+
+        const data = await response.json();
+        return parseInt(data.sequence_number, 10) || 0;
+      } catch (error) {
+        console.error("Fetch error:", error);
+        return 0;
+      }
+    }
+
+    async function fetchEvmQuests(evmAddress) {
+    try {
+        const url = `https://layerhub.xyz/be-api/protocol_wallets/movement/${evmAddress}`;
+        const headers = {
+            'Accept': '*/*',
+            'Accept-Language': 'en-US,en;q=0.9,id;q=0.8',
+            'Cache-Control': 'no-cache',
+            'Connection': 'keep-alive',
+            'Cookie': '_ga=GA1.1.2113811878.1732235985; _clck=1djpu3l%7C2%7Cfr8%7C0%7C1787; _clsk=ev8mp6%7C1732676642494%7C3%7C1%7Cb.clarity.ms%2Fcollect; _ga_JDVWTH2QBN=GS1.1.1732676607.3.1.1732676662.0.0.0',
+            'Pragma': 'no-cache',
+            'Referer': 'https://layerhub.xyz/search?p=berachain',
+            'Sec-Fetch-Dest': 'empty',
+            'Sec-Fetch-Mode': 'cors',
+            'Sec-Fetch-Site': 'same-origin',
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36 Edg/131.0.0.0',
+            'content-type': 'application/json',
+            'sec-ch-ua': '"Microsoft Edge";v="131", "Chromium";v="131", "Not_A Brand";v="24"',
+            'sec-ch-ua-mobile': '?0',
+            'sec-ch-ua-platform': '"Windows"'
+        };
+
+        const response = await fetch(url, {
+            method: 'GET',
+            headers: headers,
+        });
+
+        if (!response.ok) {
+            const errorBody = await response.text();
+            console.error(`Error: ${response.status}`, errorBody);
+            throw new Error(`Failed to fetch EVM data: ${response.status}`);
+        }
+
+        const data = await response.json();
+        const totalQuests = data.widget.data.stats.find(stat => stat.title === 'Total Quests');
+        return {
+            total: totalQuests ? totalQuests.value : 0,
+            delta: totalQuests ? totalQuests.delta : 0,
+        };
+    } catch (error) {
+        console.error("EVM Fetch error:", error);
+        return { total: 0, delta: 0 };
+    }
+}
+
+
+
+    async function fetchResults() {
+      const aptosAddress = document.getElementById("aptosAddress").value;
+      const evmAddress = document.getElementById("evmAddress").value;
+      const resultDiv = document.getElementById("result");
+
+      if (!aptosAddress || !evmAddress) {
+        resultDiv.innerHTML = "<p class='text-red-500'>Harap masukkan kedua address!</p>";
+        return;
+      }
+
+      resultDiv.innerHTML = "<p class='text-gray-500'>Loading...</p>";
+
+      const sizukaUrl = "https://aptos.testnet.suzuka.movementlabs.xyz/v1/accounts/{address}";
+      const portoUrl = "https://testnet.porto.movementnetwork.xyz/v1/accounts/{address}";
+
+      const [sizukaSeq, portoSeq, evmData] = await Promise.all([
+        fetchSequenceNumber(sizukaUrl, aptosAddress),
+        fetchSequenceNumber(portoUrl, aptosAddress),
+        fetchEvmQuests(evmAddress),
+      ]);
+
+      const totalSeq = sizukaSeq + portoSeq;
+
+      resultDiv.innerHTML = `
+        <div class="p-4 bg-gray-100 rounded border">
+          <h2 class="font-bold text-lg">Aptos Results:</h2>
+          <p>Sizuka: ${sizukaSeq}</p>
+          <p>Porto: ${portoSeq}</p>
+          <p>Total Transaction: ${totalSeq}</p>
+        </div>
+
+        <div class="mt-4 p-4 bg-gray-100 rounded border">
+          <h2 class="font-bold text-lg">Quest Results:</h2>
+          <p>Total Quests: ${evmData.total}</p>
+          <p>Delta: ${evmData.delta}</p>
+        </div>
+      `;
+    }
+  </script>
+</body>
+</html>
