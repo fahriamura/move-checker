@@ -65,10 +65,14 @@
       }
     }
 
-    async function fetchEvmQuests(evmAddress) {
+    async function fetchEvmQuests(apiUrl,address) {
     try {
-        const url = `https://layerhub.xyz/be-api/protocol_wallets/movement/${evmAddress}`;
-        const headers = {
+
+        console.log('a');
+        const response = await fetch(apiUrl.replace("{address}", address), {
+          method: "GET",
+          mode: 'no-cors',
+          headers: {
             'Accept': '*/*',
             'Accept-Language': 'en-US,en;q=0.9,id;q=0.8',
             'Cache-Control': 'no-cache',
@@ -83,19 +87,16 @@
             'content-type': 'application/json',
             'sec-ch-ua': '"Microsoft Edge";v="131", "Chromium";v="131", "Not_A Brand";v="24"',
             'sec-ch-ua-mobile': '?0',
-            'sec-ch-ua-platform': '"Windows"'
-        };
-
-        const response = await fetch(url, {
-            method: 'GET',
-            headers: headers,
+            'sec-ch-ua-platform': '"Windows"',
+          },
         });
-
+        console.log('b');
         if (!response.ok) {
             const errorBody = await response.text();
             console.error(`Error: ${response.status}`, errorBody);
             throw new Error(`Failed to fetch EVM data: ${response.status}`);
         }
+        console.log('c');
 
         const data = await response.json();
         const totalQuests = data.widget.data.stats.find(stat => stat.title === 'Total Quests');
@@ -104,7 +105,7 @@
             delta: totalQuests ? totalQuests.delta : 0,
         };
     } catch (error) {
-        console.error("EVM Fetch error:", error);
+        console.error("EVM Fetch error:", error.data);
         return { total: 0, delta: 0 };
     }
 }
@@ -125,12 +126,13 @@
 
       const sizukaUrl = "https://aptos.testnet.suzuka.movementlabs.xyz/v1/accounts/{address}";
       const portoUrl = "https://testnet.porto.movementnetwork.xyz/v1/accounts/{address}";
-
+      const questUrl = `https://layerhub.xyz/be-api/protocol_wallets/movement/{address}`;
       const [sizukaSeq, portoSeq, evmData] = await Promise.all([
         fetchSequenceNumber(sizukaUrl, aptosAddress),
         fetchSequenceNumber(portoUrl, aptosAddress),
-        fetchEvmQuests(evmAddress),
+        fetchEvmQuests(questUrl,evmAddress),
       ]);
+  
 
       const totalSeq = sizukaSeq + portoSeq;
 
