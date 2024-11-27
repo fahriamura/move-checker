@@ -65,92 +65,117 @@
       }
     }
 
-    async function fetchEvmQuests(apiUrl,address) {
+    async function fetchEvmQuests(apiUrl, address) {
     try {
+      const response = await fetch(apiUrl.replace("{address}", address), {
+        method: "GET",
+        headers: {
+          'Accept': '*/*',
+          'Accept-Language': 'en-US,en;q=0.9,id;q=0.8',
+          'Cache-Control': 'no-cache',
+          'Connection': 'keep-alive',
+          'Cookie': '_ga=GA1.1.2113811878.1732235985; _clck=1djpu3l%7C2%7Cfr8%7C0%7C1787; _clsk=ev8mp6%7C1732676642494%7C3%7C1%7Cb.clarity.ms%2Fcollect; _ga_JDVWTH2QBN=GS1.1.1732676607.3.1.1732676662.0.0.0',
+          'Pragma': 'no-cache',
+          'Referer': 'https://layerhub.xyz/search?p=berachain',
+          'Sec-Fetch-Dest': 'empty',
+          'Sec-Fetch-Mode': 'cors',
+          'Sec-Fetch-Site': 'same-origin',
+          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36 Edg/131.0.0.0',
+          'content-type': 'application/json',
+          'sec-ch-ua': '"Microsoft Edge";v="131", "Chromium";v="131", "Not_A Brand";v="24"',
+          'sec-ch-ua-mobile': '?0',
+          'sec-ch-ua-platform': '"Windows"',
+        },
+      });
 
-        console.log('a');
-        const response = await fetch(apiUrl.replace("{address}", address), {
-          method: "GET",
-          mode: 'no-cors',
-          headers: {
-            'Accept': '*/*',
-            'Accept-Language': 'en-US,en;q=0.9,id;q=0.8',
-            'Cache-Control': 'no-cache',
-            'Connection': 'keep-alive',
-            'Cookie': '_ga=GA1.1.2113811878.1732235985; _clck=1djpu3l%7C2%7Cfr8%7C0%7C1787; _clsk=ev8mp6%7C1732676642494%7C3%7C1%7Cb.clarity.ms%2Fcollect; _ga_JDVWTH2QBN=GS1.1.1732676607.3.1.1732676662.0.0.0',
-            'Pragma': 'no-cache',
-            'Referer': 'https://layerhub.xyz/search?p=berachain',
-            'Sec-Fetch-Dest': 'empty',
-            'Sec-Fetch-Mode': 'cors',
-            'Sec-Fetch-Site': 'same-origin',
-            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36 Edg/131.0.0.0',
-            'content-type': 'application/json',
-            'sec-ch-ua': '"Microsoft Edge";v="131", "Chromium";v="131", "Not_A Brand";v="24"',
-            'sec-ch-ua-mobile': '?0',
-            'sec-ch-ua-platform': '"Windows"',
-          },
-        });
-        console.log('b');
-        if (!response.ok) {
-            const errorBody = await response.text();
-            console.error(`Error: ${response.status}`, errorBody);
-            throw new Error(`Failed to fetch EVM data: ${response.status}`);
-        }
-        console.log('c');
-
-        const data = await response.json();
-        const totalQuests = data.widget.data.stats.find(stat => stat.title === 'Total Quests');
-        return {
-            total: totalQuests ? totalQuests.value : 0,
-            delta: totalQuests ? totalQuests.delta : 0,
-        };
-    } catch (error) {
-        console.error("EVM Fetch error:", error.data);
-        return { total: 0, delta: 0 };
-    }
-}
-
-
-
-    async function fetchResults() {
-      const aptosAddress = document.getElementById("aptosAddress").value;
-      const evmAddress = document.getElementById("evmAddress").value;
-      const resultDiv = document.getElementById("result");
-
-      if (!aptosAddress || !evmAddress) {
-        resultDiv.innerHTML = "<p class='text-red-500'>Harap masukkan kedua address!</p>";
-        return;
+      if (!response.ok) {
+        const errorBody = await response.text();
+        console.error(`Error: ${response.status}`, errorBody);
+        throw new Error(`Failed to fetch EVM data: ${response.status}`);
       }
 
-      resultDiv.innerHTML = "<p class='text-gray-500'>Loading...</p>";
+      const data = await response.json();
+      const stats = data.widget.data.stats;
+      const better = data.walletPerformance.betterThan;
+      const full = data.walletPerformance.totalCount;
 
-      const sizukaUrl = "https://aptos.testnet.suzuka.movementlabs.xyz/v1/accounts/{address}";
-      const portoUrl = "https://testnet.porto.movementnetwork.xyz/v1/accounts/{address}";
-      const questUrl = `https://layerhub.xyz/be-api/protocol_wallets/movement/{address}`;
-      const [sizukaSeq, portoSeq, evmData] = await Promise.all([
-        fetchSequenceNumber(sizukaUrl, aptosAddress),
-        fetchSequenceNumber(portoUrl, aptosAddress),
-        fetchEvmQuests(questUrl,evmAddress),
-      ]);
-  
 
-      const totalSeq = sizukaSeq + portoSeq;
+      const totalQuests = stats.find(stat => stat.title === 'Total Quests');
+      const totalCount = totalQuests ? totalQuests.value : 0;
 
-      resultDiv.innerHTML = `
-        <div class="p-4 bg-gray-100 rounded border">
-          <h2 class="font-bold text-lg">Aptos Results:</h2>
-          <p>Sizuka: ${sizukaSeq}</p>
-          <p>Porto: ${portoSeq}</p>
-          <p>Total Transaction: ${totalSeq}</p>
-        </div>
 
-        <div class="mt-4 p-4 bg-gray-100 rounded border">
-          <h2 class="font-bold text-lg">EVM Results:</h2>
-          <p>Total Quests: ${evmData.total}</p>
-          <p>Delta: ${evmData.delta}</p>
-        </div>
-      `;
+      const spartanQuest = stats.find(stat => stat.title === 'Spartans Quests');
+      const pathfinderQuest = stats.find(stat => stat.title === 'Pathfinders Quests');
+      const explorerQuest = stats.find(stat => stat.title === 'Explorers Quests');
+      const scholarQuest = stats.find(stat => stat.title === 'Scholars Quests');
+      const craterQuest = stats.find(stat => stat.title === 'Creators Quests');
+
+      return {
+        total: totalCount,
+        rank: full - better,
+        spartan: spartanQuest ? spartanQuest.value : 0,
+        pathfinder: pathfinderQuest ? pathfinderQuest.value : 0,
+        explorer: explorerQuest ? explorerQuest.value : 0,
+        scholar: scholarQuest ? scholarQuest.value : 0,
+        crater: craterQuest ? craterQuest.value : 0,
+      };
+    } catch (error) {
+      console.error("EVM Fetch error:", error);
+      return {
+        total: 0,
+        rank: 0,
+        spartan: 0,
+        pathfinder: 0,
+        explorer: 0,
+        scholar: 0,
+        crater: 0,
+      };
     }
+  }
+
+  async function fetchResults() {
+    const aptosAddress = document.getElementById("aptosAddress").value;
+    const evmAddress = document.getElementById("evmAddress").value;
+    const resultDiv = document.getElementById("result");
+
+    if (!aptosAddress || !evmAddress) {
+      resultDiv.innerHTML = "<p class='text-red-500'>Harap masukkan kedua address!</p>";
+      return;
+    }
+
+    resultDiv.innerHTML = "<p class='text-gray-500'>Loading...</p>";
+
+    const sizukaUrl = "https://aptos.testnet.suzuka.movementlabs.xyz/v1/accounts/{address}";
+    const portoUrl = "https://testnet.porto.movementnetwork.xyz/v1/accounts/{address}";
+    const questUrl = `https://api-move.vercel.app/api/wallet-movement?address={address}`;
+    const [sizukaSeq, portoSeq, evmData] = await Promise.all([
+      fetchSequenceNumber(sizukaUrl, aptosAddress),
+      fetchSequenceNumber(portoUrl, aptosAddress),
+      fetchEvmQuests(questUrl, evmAddress),
+    ]);
+
+    const totalSeq = sizukaSeq + portoSeq;
+
+    resultDiv.innerHTML = `
+      <div class="p-4 bg-gray-100 rounded border">
+        <h2 class="font-bold text-lg">Aptos Results:</h2>
+        <p>Sizuka: ${sizukaSeq}</p>
+        <p>Porto: ${portoSeq}</p>
+        <p>Total Transaction: ${totalSeq}</p>
+      </div>
+
+      <div class="mt-4 p-4 bg-gray-100 rounded border">
+        <h2 class="font-bold text-lg">EVM Results:</h2>
+        <p>Total Quests: ${evmData.total}</p>
+        <p>Rank: ${evmData.rank}</p>
+        <p>Spartan Quest: ${evmData.spartan}</p>
+        <p>Pathfinder Quest: ${evmData.pathfinder}</p>
+        <p>Explorer Quest: ${evmData.explorer}</p>
+        <p>Scholar Quest: ${evmData.scholar}</p>
+        <p>Creator Quest: ${evmData.crater}</p>
+      </div>
+    `;
+  }
   </script>
 </body>
 </html>

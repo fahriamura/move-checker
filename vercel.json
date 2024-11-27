@@ -1,0 +1,16 @@
+{
+    "version": 2,
+    "builds": [
+      {
+        "src": "test.py",
+        "use": "@vercel/python"
+      }
+    ],
+    "routes": [
+      {
+        "src": "/wallet-movement/(.*)",
+        "dest": "test.py"
+      }
+    ]
+  }
+  
